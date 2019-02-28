@@ -1,116 +1,114 @@
 require("dotenv").config();
 
 
-const keys = require("./keys.js");
-const Twitter = require('twitter');
-const Spotify = require('node-spotify-api');
-const request = require('request');
-const fs = require("fs");
+//variables 
+var keys = require("./keys.js");
+var request = require('request');
+var axios = require("axios");
+var Spotify = require('node-spotify-api');
+var moment = require('moment');
+var time = moment().format('HH:mm:ss');
+var fs = require('fs');
+var spotify = new Spotify(keys.spotify);
+var input = process.argv;
+var action = input[2];
+var inputs = input[3];
 
-// create a function only when Twitter is called, not automatically run
+switch (action) {
+    case "spotify-this-song":
+        spotifySong(inputs);
+        break;
 
-var getMyTweets = function () {
+    case "concert-this":
+        bandInT(inputs);
+        break;
 
-		var client = new Twitter(keys.twitterKeys);
+    case "movie-this":
+        showMovie(inputs);
+        break;
 
-		var params = { screen_name: 'kimchibcha' };
-		client.get('statuses/user_timeline', params, function (error, tweets, response) {
-			if (!error) {
-				// console.log(tweets);
-				// display specific attributes such as text associated and date
-				for(var i=0; i<tweets.length; i++) {
-					console.log(tweets[i].created_at);
-					console.log(' ');
-					console.log(tweets[i].text);
-				}
-			}
-		});
-}
-
-// Spotify
-var getArtistsNames = function(artist) {
-	return artist.name;
-}
-
-var getMeSpotify = function(songName) {
-    // console.log(searchedSong);
-
-			var spotify = new Spotify(keys.spotifyKeys);
-						
-		spotify.search({ type: 'track', query: songName }, function(err, data) {
-				if (err) {
-					return console.log('Error occurred: ' + err);
-					}
-				var songs = data.tracks.items;
-				for (var i=0; i<songs.length; i++) {
-				console.log(i);
-				console.log('artist(s): ' + songs[i].artists.map(
-					getArtistsNames));
-				console.log('song name: ' + songs[i].name);
-				console.log('preview song: ' + songs[i].preview_url);
-				console.log('album: ' + songs[i].album.name);
-				console.log('---------------------------------------');
-				}
-		});
-}
-// Request 
-function movieSearch(searchedMovie) {
-				var movieName = searchedMovie;
-
-				var queryUrl = "http://www.omdbapi.com/?t=" + movieName + "&y=&plot=short&apikey=trilogy";
-
-				// console.log(queryUrl);
-
-				request(queryUrl, function (error, response, body) {
-					if (!error && response.statusCode === 200) {
-						console.log("Title: " + JSON.parse(body).Title);
-						console.log("Release Year: " + JSON.parse(body).Year);
-						console.log("Rated: " + JSON.parse(body).Rated);
-						console.log("Actors: " + JSON.parse(body).Actors);
-						console.log("IMDB Rating: " + JSON.parse(body).imdbRating);
-						console.log("Rotten Tomatoes Rating: " + JSON.parse(body).rottenTomatoesRating);  //need to fix
-						console.log("Country/Countries Filmed: " + JSON.parse(body).Country);
-						console.log("Language(s): " + JSON.parse(body).Language);
-						console.log("Plot: " + JSON.parse(body).Plot);
-					}
-				});
-}
-// fs file
-
-var doWhatItSays = function() {
-			fs.readFile("random.txt", "utf8", function (err, data) {
-				if (err) throw err;
-				var dataArr = data.split(',');
-
-				if (dataArr.length == 2) {
-					pick(dataArr[0], dataArr[1]);
-				} else if (dataArr.length ==1) {
-					pick(dataArr[0]);
-				}
-			});
-}
-
-	// Switch statement to hold different arguments
-
-var pick = function(caseData, functionData) {
-		switch(caseData) {
-			case "my-tweets" :
-						getMyTweets();
-						break;
-			case 'spotify-this-song':
-						getMeSpotify(functionData);
-						break;
-			case 'movie-this':
-						movieSearch(functionData);
-			case 'do-what-it-says':
-						doWhatItSays();
-			default:
-			console.log('LIRI is dumb, cant recognize this');
-		}
-}
-
-var runThis = function(argOne, argTwo) {
-		pick(argOne, argTwo);
+    case "do-what-it-says":
+        doit();
+        break;
 };
-// [0=node]; [1=liri]; [2=my-tweets]; [3=name of a movie]
-runThis(process.argv[2], process.argv[3]);
+
+// spotify music search function
+function spotifySong(inputs) {
+    if (inputs === undefined) {
+        inputs = "The Sign by ace of base";
+    }
+    spotify.search(
+        {
+            type: "track",
+            query: inputs,
+            limit: 10
+        },
+        function (err, data) {
+            if (err) {
+                console.log("Error occurred: " + err);
+                return;
+            }
+            var songs = data.tracks.items;
+            for (var i = 0; i < songs.length; i++) {
+                console.log("______________________________________");
+                console.log(i);
+                console.log("Artist name: " + songs[i].artists[0].name);
+                console.log("Song title: " + songs[i].name);
+                console.log("Track number: " + songs[i].track_number);
+                console.log("Album: " + songs[i].album.name);
+                console.log("Release date: " + songs[i].album.release_date);
+                console.log("Album type: " + songs[i].album.album_type);
+                console.log("Preview song: " + songs[i].preview_url);
+                console.log("----------------------------------------");
+            }
+        }
+    );
+};
+
+// omdb to pull up movie info
+function showMovie(inputs) {
+
+    console.log("this is movie-this ", inputs);
+    if (inputs === undefined) {
+        inputs = "Mr Nobody";
+    }
+
+    var queryUrl = "http://www.omdbapi.com/?t=" + inputs + "&y=&plot=short&apikey="ecce8d19";
+
+    request(queryUrl, function (error, response, body) {
+
+        // console.log("body ", body);
+
+        if (!error && response.statusCode === 200) {
+
+            console.log("------------------------------------");
+            console.log("Title: " + JSON.parse(body).Title);
+            console.log("Release Year: " + JSON.parse(body).Year);
+            console.log("IMDB Rating: " + JSON.parse(body).imdbRating);
+            console.log("Rotten Tomatoes Rating: " + JSON.parse(body).Ratings[1].Source[1]);
+            console.log("Country: " + JSON.parse(body).Country);
+            console.log("Language: " + JSON.parse(body).Language);
+            console.log("Plot: " + JSON.parse(body).Plot);
+            console.log("Actors: " + JSON.parse(body).Actors);
+            console.log("------------------------------------");
+        }
+    });
+};
+
+// find concerts
+function bandInT(inputs) {
+    request("https://rest.bandsintown.com/artists/" + inputs + "/events?app_id=codingbootcamp", function (error, response, body) {
+
+        if (inputs === undefined) {
+            console.log("Please input a band.");
+        }
+
+        if (inputs <= 1) {
+            console.log("Sorry! " + inputs + " isn't playing right now. Choose again.");
+        }
+
+        if (!error && response.statusCode === 200) {
+
+          //need concert dates venue ect 
+
+          // need to show read random.txt   
